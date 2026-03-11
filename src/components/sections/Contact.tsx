@@ -14,6 +14,9 @@ export function Contact() {
         setIsSubmitting(true);
         setSubmitStatus("idle");
 
+        // Save the form reference synchronously before any await calls
+        const form = e.currentTarget;
+
         const formData = new FormData(e.currentTarget);
         const subject = formData.get("subject") as string;
         const msg = formData.get("message") as string;
@@ -24,6 +27,7 @@ export function Contact() {
             message: `Subject: ${subject}\n\n${msg}`,
         };
 
+        let success = false;
         try {
             const { error } = await supabase
                 .from("contact_submissions")
@@ -31,15 +35,15 @@ export function Contact() {
 
             if (error) throw error;
 
+            success = true;
             setSubmitStatus("success");
-            e.currentTarget.reset();
+            form.reset();
         } catch (error) {
             console.error("Error submitting form:", error);
             setSubmitStatus("error");
         } finally {
             setIsSubmitting(false);
-            // Reset status after 5 seconds if success
-            if (submitStatus !== "error") {
+            if (success) {
                 setTimeout(() => setSubmitStatus("idle"), 5000);
             }
         }
