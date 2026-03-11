@@ -44,7 +44,7 @@ export function Footer() {
                             <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors" aria-label="GitHub">
                                 <Github size={22} />
                             </a>
-                            <a href="#contact" className="text-slate-400 hover:text-white transition-colors" aria-label="Email Contact Form cursor tracking">
+                            <a href="mailto:hiren.patel2728@gmail.com" className="text-slate-400 hover:text-white transition-colors" aria-label="Email Hiren Patel">
                                 <Mail size={22} />
                             </a>
                         </div>

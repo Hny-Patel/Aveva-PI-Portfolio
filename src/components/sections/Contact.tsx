@@ -71,7 +71,7 @@ export function Contact() {
                             transition={{ duration: 0.5, delay: 0.1 }}
                             className="text-lg text-slate-400 font-sans max-w-2xl mx-auto"
                         >
-                            Whether discussing potential roles, PI architecture strategies, or custom data integrations—my inbox is open.
+                            Whether discussing potential roles, PI architecture strategies, or custom data integrations—my inbox is open at <a href="mailto:hiren.patel2728@gmail.com" className="text-pi-orange hover:underline">hiren.patel2728@gmail.com</a>.
                         </motion.p>
                     </div>
 

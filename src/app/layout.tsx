@@ -37,6 +37,7 @@ export default function RootLayout({
     "name": "Hiren Patel",
     "jobTitle": "Application Manager",
     "url": "https://hirenportfolio.vercel.app",
+    "email": "hiren.patel2728@gmail.com",
     "address": {
       "@type": "PostalAddress",
       "addressLocality": "Surat",
