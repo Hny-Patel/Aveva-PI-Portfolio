@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #0D1B2A;
+  --color-navy-light: #1A2E44;
+  --color-pi-orange: #D4521A;
+  --color-pi-orange-light: #F06A30;
+
+  --font-sans: var(--font-syne), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-navy text-slate-200 antialiased overflow-x-hidden;
+  }
+
+  /* Custom Scrollbar for Industrial Precision aesthetic */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-navy;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-navy-light rounded hover:bg-slate-700 transition-colors;
+  }
+}
