@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Inbox, RefreshCw, Mail, User, MessageSquare, Calendar, LogOut, ChevronDown, ChevronUp } from "lucide-react";
+import {
+    Lock, Inbox, RefreshCw, Mail, User, MessageSquare,
+    Calendar, LogOut, ChevronDown, ChevronUp, Trash2, CheckSquare, Square,
+} from "lucide-react";
 
 const ADMIN_PIN = process.env.NEXT_PUBLIC_ADMIN_PIN || "hiren2024";
 
@@ -29,6 +32,9 @@ export default function AdminPage() {
     const [loading, setLoading] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [deleting, setDeleting] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
 
     const fetchSubmissions = useCallback(async () => {
         setLoading(true);
@@ -38,14 +44,12 @@ export default function AdminPage() {
                 headers: { "x-admin-pin": ADMIN_PIN },
             });
             const json = await res.json();
-            if (!res.ok) {
-                throw new Error(json.error || `HTTP ${res.status}`);
-            }
+            if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
             setSubmissions(json.data || []);
+            setSelectedIds(new Set());
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : "Unknown error";
             setFetchError(msg);
-            console.error("Failed to fetch:", msg);
         } finally {
             setLoading(false);
         }
@@ -69,10 +73,50 @@ export default function AdminPage() {
         setPin("");
     };
 
-    useEffect(() => {
-        if (sessionStorage.getItem("admin_auth") === "1") {
-            setAuthenticated(true);
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === submissions.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(submissions.map(s => s.id)));
         }
+    };
+
+    const handleDelete = async () => {
+        if (selectedIds.size === 0) return;
+        setDeleting(true);
+        try {
+            const res = await fetch("/api/admin/contacts", {
+                method: "DELETE",
+                headers: {
+                    "x-admin-pin": ADMIN_PIN,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ ids: Array.from(selectedIds) }),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+            // Remove deleted records locally immediately
+            setSubmissions(prev => prev.filter(s => !selectedIds.has(s.id)));
+            setSelectedIds(new Set());
+            setExpandedId(null);
+        } catch (err: unknown) {
+            alert("Delete failed: " + (err instanceof Error ? err.message : "Unknown error"));
+        } finally {
+            setDeleting(false);
+            setConfirmDelete(false);
+        }
+    };
+
+    useEffect(() => {
+        if (sessionStorage.getItem("admin_auth") === "1") setAuthenticated(true);
     }, []);
 
     useEffect(() => {
@@ -95,7 +139,6 @@ export default function AdminPage() {
                         <h1 className="text-2xl font-sans font-bold text-white">Admin Inbox</h1>
                         <p className="text-slate-400 text-sm mt-1 font-mono">Enter your PIN to continue</p>
                     </div>
-
                     <form onSubmit={handleLogin} className="space-y-4">
                         <input
                             type="password"
@@ -111,19 +154,14 @@ export default function AdminPage() {
                         <AnimatePresence>
                             {pinError && (
                                 <motion.p
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
+                                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                                     className="text-red-400 text-sm text-center font-mono"
                                 >
                                     Incorrect PIN. Try again.
                                 </motion.p>
                             )}
                         </AnimatePresence>
-                        <button
-                            type="submit"
-                            className="w-full py-3 bg-pi-orange hover:bg-pi-orange-light text-white font-sans font-semibold rounded-lg transition-colors"
-                        >
+                        <button type="submit" className="w-full py-3 bg-pi-orange text-white font-sans font-semibold rounded-lg transition-colors hover:opacity-90">
                             Unlock
                         </button>
                     </form>
@@ -132,42 +170,102 @@ export default function AdminPage() {
         );
     }
 
-    // ─── INBOX SCREEN ─────────────────────────────────────────────────────────
-    const unreadCount = submissions.length;
+    const allSelected = submissions.length > 0 && selectedIds.size === submissions.length;
+    const someSelected = selectedIds.size > 0;
 
+    // ─── INBOX SCREEN ─────────────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-navy">
+            {/* Header */}
             <div className="border-b border-slate-800 bg-navy-light sticky top-0 z-10">
-                <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+                <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <Inbox className="w-5 h-5 text-pi-orange" />
                         <h1 className="font-sans font-bold text-white">Contact Inbox</h1>
-                        {unreadCount > 0 && (
+                        {submissions.length > 0 && (
                             <span className="bg-pi-orange text-white text-xs font-mono px-2 py-0.5 rounded-full">
-                                {unreadCount}
+                                {submissions.length}
                             </span>
                         )}
                     </div>
                     <div className="flex items-center gap-3">
+                        {/* Delete selected */}
+                        <AnimatePresence>
+                            {someSelected && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    className="flex items-center gap-2"
+                                >
+                                    {confirmDelete ? (
+                                        <>
+                                            <span className="text-slate-400 text-xs font-mono">Delete {selectedIds.size}?</span>
+                                            <button
+                                                onClick={handleDelete}
+                                                disabled={deleting}
+                                                className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-mono px-3 py-1.5 rounded-lg transition-colors"
+                                            >
+                                                {deleting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                                                {deleting ? "Deleting..." : "Confirm"}
+                                            </button>
+                                            <button
+                                                onClick={() => setConfirmDelete(false)}
+                                                className="text-slate-400 hover:text-white text-xs font-mono px-2 py-1.5 transition-colors"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            onClick={() => setConfirmDelete(true)}
+                                            className="flex items-center gap-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 text-xs font-mono px-3 py-1.5 rounded-lg transition-colors"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                            Delete {selectedIds.size} selected
+                                        </button>
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                         <button
                             onClick={fetchSubmissions}
                             disabled={loading}
                             className="flex items-center gap-2 text-slate-400 hover:text-white text-sm font-mono transition-colors"
                         >
                             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-                            Refresh
+                            <span className="hidden sm:block">Refresh</span>
                         </button>
                         <button
                             onClick={handleLogout}
                             className="flex items-center gap-2 text-slate-500 hover:text-red-400 text-sm font-mono transition-colors"
                         >
                             <LogOut className="w-4 h-4" />
-                            Logout
+                            <span className="hidden sm:block">Logout</span>
                         </button>
                     </div>
                 </div>
+
+                {/* Select-all bar — only visible when submissions loaded */}
+                {submissions.length > 0 && (
+                    <div className="max-w-5xl mx-auto px-4 pb-2 flex items-center gap-3">
+                        <button
+                            onClick={toggleSelectAll}
+                            className="flex items-center gap-2 text-slate-400 hover:text-white text-xs font-mono transition-colors"
+                        >
+                            {allSelected
+                                ? <CheckSquare className="w-4 h-4 text-pi-orange" />
+                                : <Square className="w-4 h-4" />}
+                            {allSelected ? "Deselect all" : "Select all"}
+                        </button>
+                        {someSelected && (
+                            <span className="text-xs font-mono text-slate-500">{selectedIds.size} of {submissions.length} selected</span>
+                        )}
+                    </div>
+                )}
             </div>
 
+            {/* Body */}
             <div className="max-w-5xl mx-auto px-4 py-8">
                 {loading && submissions.length === 0 ? (
                     <div className="flex flex-col items-center py-24 text-slate-600">
@@ -190,6 +288,7 @@ export default function AdminPage() {
                     <div className="space-y-3">
                         {submissions.map((s, i) => {
                             const isExpanded = expandedId === s.id;
+                            const isSelected = selectedIds.has(s.id);
                             const lines = s.message?.split("\n") ?? [];
                             const subjectLine = lines.find(l => l.startsWith("Subject:"))?.replace("Subject:", "").trim() || "No subject";
                             const bodyLines = lines.filter(l => !l.startsWith("Subject:") && l.trim() !== "");
@@ -199,26 +298,51 @@ export default function AdminPage() {
                                     key={s.id}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: i * 0.05 }}
-                                    className={`bg-navy-light border rounded-xl overflow-hidden transition-colors cursor-pointer ${isExpanded ? "border-pi-orange/40" : "border-slate-800 hover:border-slate-600"
+                                    transition={{ delay: i * 0.04 }}
+                                    className={`border rounded-xl overflow-hidden transition-colors ${isSelected
+                                        ? "border-pi-orange/50 bg-pi-orange/5"
+                                        : isExpanded
+                                            ? "border-slate-600 bg-navy-light"
+                                            : "border-slate-800 bg-navy-light hover:border-slate-600"
                                         }`}
-                                    onClick={() => setExpandedId(isExpanded ? null : s.id)}
                                 >
                                     {/* Header Row */}
-                                    <div className="px-6 py-4 flex items-center gap-4">
-                                        <div className="w-9 h-9 rounded-full bg-navy border border-slate-700 flex items-center justify-center shrink-0">
-                                            <User className="w-4 h-4 text-slate-400" />
+                                    <div className="px-4 py-4 flex items-center gap-3">
+                                        {/* Checkbox */}
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); toggleSelect(s.id); }}
+                                            className="shrink-0 text-slate-500 hover:text-pi-orange transition-colors"
+                                            aria-label={`Select message from ${s.name}`}
+                                        >
+                                            {isSelected
+                                                ? <CheckSquare className="w-5 h-5 text-pi-orange" />
+                                                : <Square className="w-5 h-5" />}
+                                        </button>
+
+                                        {/* Avatar */}
+                                        <div className="w-8 h-8 rounded-full bg-navy border border-slate-700 flex items-center justify-center shrink-0">
+                                            <User className="w-3.5 h-3.5 text-slate-400" />
                                         </div>
-                                        <div className="flex-grow min-w-0">
+
+                                        {/* Content — clickable to expand */}
+                                        <div
+                                            className="flex-grow min-w-0 cursor-pointer"
+                                            onClick={() => setExpandedId(isExpanded ? null : s.id)}
+                                        >
                                             <div className="flex items-center gap-2 mb-0.5">
                                                 <span className="text-white font-sans font-semibold truncate">{s.name}</span>
                                                 <span className="text-slate-600 text-xs font-mono hidden sm:block">&lt;{s.email}&gt;</span>
                                             </div>
                                             <p className="text-slate-400 text-sm truncate font-sans">{subjectLine}</p>
                                         </div>
-                                        <div className="flex items-center gap-3 shrink-0">
-                                            <div className="flex items-center gap-1.5 text-slate-600 text-xs font-mono">
-                                                <Calendar className="w-3.5 h-3.5" />
+
+                                        {/* Date + chevron */}
+                                        <div
+                                            className="flex items-center gap-2 shrink-0 cursor-pointer"
+                                            onClick={() => setExpandedId(isExpanded ? null : s.id)}
+                                        >
+                                            <div className="flex items-center gap-1 text-slate-600 text-xs font-mono">
+                                                <Calendar className="w-3 h-3" />
                                                 <span className="hidden sm:block">{formatDate(s.created_at)}</span>
                                             </div>
                                             {isExpanded ? (
@@ -236,7 +360,7 @@ export default function AdminPage() {
                                                 initial={{ height: 0, opacity: 0 }}
                                                 animate={{ height: "auto", opacity: 1 }}
                                                 exit={{ height: 0, opacity: 0 }}
-                                                transition={{ duration: 0.25 }}
+                                                transition={{ duration: 0.2 }}
                                                 className="overflow-hidden border-t border-slate-800"
                                             >
                                                 <div className="px-6 py-5 space-y-4 bg-navy/60">
@@ -258,6 +382,16 @@ export default function AdminPage() {
                                                         {bodyLines.map((line, li) => (
                                                             <p key={li} className="text-slate-300 font-sans leading-relaxed">{line}</p>
                                                         ))}
+                                                    </div>
+                                                    {/* Per-row delete */}
+                                                    <div className="flex justify-end">
+                                                        <button
+                                                            onClick={() => { setSelectedIds(new Set([s.id])); setConfirmDelete(true); setExpandedId(null); }}
+                                                            className="flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-mono transition-colors"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                            Delete this message
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </motion.div>
