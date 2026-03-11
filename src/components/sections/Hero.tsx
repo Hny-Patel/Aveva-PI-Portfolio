@@ -250,8 +250,12 @@ export function Hero() {
     };
 
     const handleResumeDownload = () => {
-        // In a real scenario, this would link to an actual PDF in the public folder.
-        window.open('/hiren_patel_resume.pdf', '_blank');
+        const link = document.createElement('a');
+        link.href = '/Hiren_Resume_osipi.pdf';
+        link.download = 'Hiren_Patel_Resume.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     return (
