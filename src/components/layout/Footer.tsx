@@ -20,7 +20,7 @@ export function Footer() {
                             </div>
                         </Link>
                         <p className="text-sm text-slate-400 max-w-sm mt-4 font-sans leading-relaxed">
-                            AVEVA PI Data Historian Specialist & Sr. Manufacturing Systems Engineer.
+                            AVEVA PI Data Historian Specialist & Application Manager.
                             Translating industrial data into actionable enterprise intelligence.
                         </p>
                     </div>

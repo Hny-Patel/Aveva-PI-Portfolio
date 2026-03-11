@@ -273,7 +273,7 @@ export function Hero() {
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pi-orange opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-pi-orange"></span>
                             </span>
-                            <span className="text-xs sm:text-sm font-mono tracking-wide text-slate-300">Target: Sr. Manufacturing Systems Engineer</span>
+                            <span className="text-xs sm:text-sm font-mono tracking-wide text-slate-300">Target: Application Manager</span>
                         </div>
                     </motion.div>
 

@@ -35,7 +35,7 @@ export default function RootLayout({
     "@context": "https://schema.org",
     "@type": "Person",
     "name": "Hiren Patel",
-    "jobTitle": "Sr. Manufacturing Systems Engineer",
+    "jobTitle": "Application Manager",
     "url": "https://hirenportfolio.vercel.app",
     "address": {
       "@type": "PostalAddress",
