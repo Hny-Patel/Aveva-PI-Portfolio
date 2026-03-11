@@ -27,21 +27,25 @@ export default function AdminPage() {
     const [pinError, setPinError] = useState(false);
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [loading, setLoading] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
     const fetchSubmissions = useCallback(async () => {
         setLoading(true);
+        setFetchError(null);
         try {
-            const { supabase } = await import("@/lib/supabaseClient");
-            const { data, error } = await supabase
-                .from("contact_submissions")
-                .select("*")
-                .order("created_at", { ascending: false });
-
-            if (error) throw error;
-            setSubmissions(data || []);
-        } catch (err) {
-            console.error("Failed to fetch:", err);
+            const res = await fetch("/api/admin/contacts", {
+                headers: { "x-admin-pin": ADMIN_PIN },
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                throw new Error(json.error || `HTTP ${res.status}`);
+            }
+            setSubmissions(json.data || []);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : "Unknown error";
+            setFetchError(msg);
+            console.error("Failed to fetch:", msg);
         } finally {
             setLoading(false);
         }
@@ -100,8 +104,8 @@ export default function AdminPage() {
                             placeholder="Enter PIN"
                             autoFocus
                             className={`w-full bg-navy border rounded-lg px-4 py-3 text-white text-center font-mono text-xl tracking-widest focus:outline-none transition-colors ${pinError
-                                    ? "border-red-500 focus:border-red-500"
-                                    : "border-slate-700 focus:border-pi-orange"
+                                ? "border-red-500 focus:border-red-500"
+                                : "border-slate-700 focus:border-pi-orange"
                                 }`}
                         />
                         <AnimatePresence>
@@ -169,6 +173,13 @@ export default function AdminPage() {
                     <div className="flex flex-col items-center py-24 text-slate-600">
                         <RefreshCw className="w-8 h-8 animate-spin mb-4" />
                         <p className="font-mono text-sm">Loading messages...</p>
+                    </div>
+                ) : fetchError ? (
+                    <div className="flex flex-col items-center py-24 text-red-400">
+                        <Inbox className="w-10 h-10 mb-4 opacity-40" />
+                        <p className="font-mono text-sm font-bold mb-2">Failed to load messages</p>
+                        <p className="font-mono text-xs text-slate-500 max-w-sm text-center">{fetchError}</p>
+                        <button onClick={fetchSubmissions} className="mt-4 text-xs font-mono text-pi-orange hover:underline">Try again</button>
                     </div>
                 ) : submissions.length === 0 ? (
                     <div className="flex flex-col items-center py-24 text-slate-600">
